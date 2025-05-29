@@ -1,6 +1,3 @@
-import sys
-sys.path.append('/Users/andres/Documents/VisualStudio/BB84_Project')
-
 from netsquid.protocols.nodeprotocols import LocalProtocol
 from netsquid.protocols import Signals
 from netsquid.util import DataCollector
