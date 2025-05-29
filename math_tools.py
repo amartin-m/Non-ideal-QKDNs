@@ -105,7 +105,7 @@ def P_X(distance: float, p_loss_length: float,
           emission_efficiency: float, detection_efficiency: float,
           DCR: float, covery_factor: float, std: float, speed_fraction: float):
     """
-    Probability of not detecting any signal in certain measuring time interval.
+    Probability of not detecting any signal in certain measuring time interval. Neither Alice's photon nor dark count.
     Depends on:
         - distance (km)
         - p_loss_length (dB/km)
@@ -161,6 +161,9 @@ def expected_KBR(distance: float, n: int, p_loss_length: float,
         - depolar_rate: Hz
         - std
         - covery_factor
+    It returns the KBR and its standard deviation as number of output bits per quantum channel usage.
+    It can be easily adapted to output bits per second.
+    This calculation is done assuming 1/3 of the raw key bits are used for parameter estimation.
     """
     wait_time = distance/(300000 * speed_fraction) *1e9 #ns
     sending_rate = max(3*gate_duration_A, 3*covery_factor*std*wait_time + dead_time + detector_delay + gate_duration_B)
@@ -173,11 +176,16 @@ def expected_KBR(distance: float, n: int, p_loss_length: float,
     #return H2(exp_QBER) * (1 - PX) * n / 3 / (n*sending_rate*1e-9 + 11 * distance/(300000*speed_fraction)) # key bits/s
     KBR = (1 - 2.27*H(exp_QBER)) * (1 - PX) / 3 - (6 + 4*np.log2(m/0.01))/n
     p = 0.5*(1 - PX)
-    delta_l = np.sqrt(n*p*(1 - p))
+    delta_l = 2/3*np.sqrt(n*p*(1 - p))
     delta_KBR = (1 - 2.27*H(exp_QBER))*delta_l*np.sqrt(1+ (4/m)**2)/n #+ (4/m)**2 inside sqrt
     return KBR, delta_KBR
 
 def m_solution(k, eps = 0.01):
+    """
+    This function calculates m numerically in terms of k.
+    m is the output key length after privacy amplification, using the Trevisan extractor.
+    k is a lower bound of the key min-entropy, from the eavesdropper point of view.
+    """
     def equation(m):
         return m - (k - 6 - 4*np.log2(m / eps))
 
@@ -191,6 +199,10 @@ def limit_distance(limit_error: float, p_loss_length: float,
           emission_efficiency: float, detection_efficiency: float,
           DCR: float, speed_fraction: float, depolar_rate: float,
           std: float, covery_factor: float):
+    """
+    This function calculates the limit distance for secure key exchange in terms of the QBER threshold.
+    threshold. This calculation does not consider finite key effects.
+    """
     def equation(distance, p_loss_length,
           emission_efficiency, detection_efficiency,
           DCR, speed_fraction, depolar_rate,
@@ -200,21 +212,26 @@ def limit_distance(limit_error: float, p_loss_length: float,
     solution = fsolve(lambda distance: equation(distance, p_loss_length, emission_efficiency, detection_efficiency, DCR, speed_fraction, depolar_rate, std, covery_factor), d0)
     return solution[0]
 
-def get_n_lim(distance, DCR, depolar_rate, l, STRATEGY = 1,
-              p_loss_length = 0.2, emission_efficiency = 0.9, 
-              detection_efficiency = 0.9, speed_fraction = 0.67,
-              std = 0.05, covery_factor = 3,
-              C_q = 3, eps = 0.05):
+def get_n_lim(distance, DCR, depolar_rate, M, STRATEGY = 1,
+              p_loss_length = 0.2, emission_efficiency = 0.2, 
+              detection_efficiency = 0.6, speed_fraction = 0.67,
+              std = 0.02, covery_factor = 3,
+              C_F = 3, eps = 0.1, alpha = 3, beta = 20):
     """
-    TRUE CALCULATION
+    TRUE CALCULATION. AUXILIARY FUNCTION.
     Minimum number of bits after sifting (not photons) needed for correct parameter estimation.
     It is an initial limit, a more restrictive lower bound needs to be given.
     Parameters:
     - d: distance
     - DCR: dark count rates
     - depolar_rate: noise parameter
-    - C_q: covery factor in the quantum phase
-    - eps: accuracy standard for dQBER/QBER <= eps
+    - M: output length requirements
+    - STRATEGY (int, optional): Parameter estimation strategy to use 
+            (1 = fixed number, 0.5 = square root scaling, else: g = fixed fraction). Default is 1/3.
+    - C_F: covery factor in the quantum phase
+    - eps: accuracy standard for dQBER/QBER <= f(eps)
+    - alpha: accuracy parameter for dQBER/QBER <= f(eps). Default: 3
+    - beta: accuracy parameter for dQBER/QBER <= f(eps). Default: 20
     """
     p = 0.5*(1 - P_X(distance = distance, p_loss_length = p_loss_length,
           emission_efficiency = emission_efficiency, 
@@ -226,37 +243,64 @@ def get_n_lim(distance, DCR, depolar_rate, l, STRATEGY = 1,
           DCR = DCR, speed_fraction = speed_fraction, 
           depolar_rate = depolar_rate,
           std = std, covery_factor = covery_factor)
-    func = eps + 3*eps*10**(-20*P_flip)
+    F = 1.27 #Cascade fidelity
+    max_eps = 0.01 #Trevisan security parameter
+    l_F = (M + 6 + 4*np.log2(M/max_eps))/(1 - (1 + F)*H(P_flip))
+
+    func = eps + alpha*eps*10**(-beta*P_flip)
     A = 1/(func*func)*(1/P_flip - 1)
     #A = 1/(eps*eps)*(1/P_flip - 1) #This value is often used in other functions
     if STRATEGY == 0.5:
         def equation(x, C_q, p, l, A):
             return x**3 - C_q*np.sqrt(1 - p)*x**2 - (l + A)*x + 0.5 * A*C_q*np.sqrt(1 - p)
-        D = 0.25 * (C_q*np.sqrt(1 - p) + np.sqrt(C_q*C_q*(1 - p) + 4*(l + A)))**2
+        D = 0.25 * (C_F*np.sqrt(1 - p) + np.sqrt(C_F*C_F*(1 - p) + 4*(l_F + A)))**2
         n0 = max(2*A, D) #initial guess
-        solution = fsolve(lambda x: equation(x, C_q, p, l, A), n0)
+        solution = fsolve(lambda x: equation(x, C_F, p, l_F, A), n0)
         return solution[0]**2, A, D
     elif STRATEGY == 1:
-        D = 0.25 * (C_q*np.sqrt(1 - p) + np.sqrt(C_q*C_q*(1 - p) + 4*(l + A)))**2
+        D = 0.25 * (C_F*np.sqrt(1 - p) + np.sqrt(C_F*C_F*(1 - p) + 4*(l_F + A)))**2
         return max(2*A, D), A, D #initial guess
     else:
-        D = 0.25 * (C_q*np.sqrt(1 - p) + np.sqrt(C_q*C_q*(1 - p) + 4*l/(1 - STRATEGY)))**2
+        D = 0.25 * (C_F*np.sqrt(1 - p) + np.sqrt(C_F*C_F*(1 - p) + 4*l_F/(1 - STRATEGY)))**2
         return max(A/STRATEGY, D), A, D
     
-def get_minimum_photons(distance, DCR, depolar_rate, l, STRATEGY = 1,
-                        p_loss_length = 0.2, emission_efficiency = 0.9, 
-                        detection_efficiency = 0.9, speed_fraction = 0.67,
-                        std = 0.05, covery_factor = 3,
-                        C_q = 3, eps = 0.05):
+def get_minimum_photons(distance, M, DCR, depolar_rate, STRATEGY = 1/3,
+                        p_loss_length = 0.2, emission_efficiency = 0.2, 
+                        detection_efficiency = 0.6, speed_fraction = 0.67,
+                        std = 0.02, covery_factor = 3,
+                        C_F = 3, eps = 0.1, alpha = 3, beta = 20):
+    """
+    Estimate the minimum number of photons required to generate a secure key 
+    of length M over a quantum link with given physical parameters.
+
+    Args:
+        - distance (float): Distance of the quantum channel in kilometers.
+        - DCR (float): Dark count rate of the detector (in Hz).
+        - depolar_rate (float): Depolarization rate of the channel.
+        - M (int): Target length of the final secret key.
+        - STRATEGY (int, optional): Parameter estimation strategy to use 
+            (1 = fixed number, 0.5 = square root scaling, else: g = fixed fraction). Default is 1/3.
+        - p_loss_length (float, optional): Attenuation coefficient of the fiber (in dB/km). Default is 0.2.
+        - emission_efficiency (float, optional): Efficiency of the photon source. Default is 0.9.
+        - detection_efficiency (float, optional): Efficiency of the photon detector. Default is 0.9.
+        - speed_fraction (float, optional): Fraction of the speed of light in the fiber. Default is 0.67.
+        - std (float, optional): Standard deviation of the channel loss model. Default is 0.05.
+        - covery_factor (float, optional): Confidence multiplier for statistical estimation. Default is 3.
+        - C_F (float, optional): Confidence factor for number of photons estimation. Default is 3.
+        - eps (float, optional): Maximum acceptable failure probability. Default is 0.05.
+
+    Returns:
+        float: Minimum number of photons required to meet the key generation target under the given conditions.
+    """
     p = 0.5*(1 - P_X(distance = distance, p_loss_length = p_loss_length,
           emission_efficiency = emission_efficiency, 
           detection_efficiency = detection_efficiency,
           DCR = DCR, covery_factor = covery_factor, std = std, speed_fraction = speed_fraction))
-    n_lim, A, _ = get_n_lim(distance = distance, DCR = DCR, depolar_rate = depolar_rate, l = l, STRATEGY = STRATEGY,
+    n_lim, A, _ = get_n_lim(distance = distance, DCR = DCR, depolar_rate = depolar_rate, M = M, STRATEGY = STRATEGY,
               p_loss_length = p_loss_length, emission_efficiency = emission_efficiency, 
               detection_efficiency = detection_efficiency, speed_fraction = speed_fraction,
               std = std, covery_factor = covery_factor,
-              C_q = C_q, eps = eps)
+              C_F = C_F, eps = eps, alpha = alpha, beta = beta)
     if STRATEGY == 0.5:
         #part1 = C_q*np.sqrt(1 - p) + A/np.sqrt(n_lim)
         #part2 = 4*(l - (0.5*A*C_q*np.sqrt(1 - p))/np.sqrt(n_lim))
@@ -265,31 +309,4 @@ def get_minimum_photons(distance, DCR, depolar_rate, l, STRATEGY = 1,
         res = max(n_lim, 4*A*A/n_lim)
     else:
         res = n_lim
-    return res/p
-
-def get_photons_needeed(distance, M, C_q = 3,
-                        depolar_rate = 100, DCR = 25,
-                        p_loss_length = 0.2, emission_efficiency = 0.2, detection_efficiency = 0.6,
-                        std = 0.02, speed_fraction = 0.67, strategy = 1/3, covery_factor = 3,
-                        eps = 0.05
-                       ):
-    #The classical phase calculates l to ask to the quantum phase
-    #Fitted parameters FOR STD OF EXPOSED BITS: a=239.45783, b=0.01255, c=-0.00467.
-    #a = 239.45783
-    #b = 0.01255
-    #c = -0.00467
-    F = 1.27 #Cascade fidelity
-    max_eps = 0.01 #Trevisan security parameter
-    Q = expected_QBER(distance = distance, p_loss_length = p_loss_length,
-          emission_efficiency = emission_efficiency, detection_efficiency = detection_efficiency,
-          DCR = DCR, speed_fraction = speed_fraction, depolar_rate = depolar_rate,
-          std = std, covery_factor = covery_factor)
-    l = (M + 6 + 4*np.log2(M/max_eps))/(1 - (1 + F)*H(Q))
-
-    #Now, quantum stage starts working
-    N_photons = get_minimum_photons(distance = distance, DCR = DCR, depolar_rate = depolar_rate, l = l, STRATEGY = strategy,
-                        p_loss_length = p_loss_length, emission_efficiency = emission_efficiency, 
-                        detection_efficiency = detection_efficiency, speed_fraction = speed_fraction,
-                        std =std, covery_factor = covery_factor,
-                        C_q = C_q, eps = eps)
-    return int(N_photons), int(l)
+    return int(res/p)
