@@ -1,7 +1,3 @@
-import sys
-sys.path.append('/Users/andres/Documents/VisualStudio/BB84_Project/nodes')
-
-
 from typing import Dict
 from qkd_link_informer import QKDLinkInformer
 from netsquid.nodes import Node
