@@ -1,10 +1,11 @@
 import random
-import sys
 import numpy as np
 from scipy.optimize import fsolve
+"""
+This file provides functions to simulate the BB84 protocol without the use of NetSquid.
+The main focus is characterize probabilistically the key leength of every step in the protocol.
+"""
 
-
-sys.path.append('/Users/andres/Documents/VisualStudio/BB84_Project')
 from math_tools import *
 
 def generate_binary_list(N):
