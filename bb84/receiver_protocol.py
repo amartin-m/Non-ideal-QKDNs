@@ -1,5 +1,3 @@
-import sys
-sys.path.append('/Users/andres/Documents/VisualStudio/BB84_Project')
 import netsquid as ns
 import numpy as np
 from netsquid.protocols import Signals
