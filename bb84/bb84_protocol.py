@@ -1,3 +1,14 @@
+import sys
+sys.path.append('/Users/andres/Documents/VisualStudio/BB84_Project')
+
+#TREVISAN
+from cryptomite.trevisan import Trevisan
+
+#BRUNO RIKJSMAN CASCADE
+sys.path.append('/Users/andres/Desktop/MASTER/TFM/cascade_python_master')
+from cascade_python_master.cascade.reconciliation import *
+from cascade_python_master.cascade.tests.test_reconciliation import *
+
 from netsquid.protocols.nodeprotocols import LocalProtocol
 from netsquid.protocols import Signals
 from netsquid.util import DataCollector
@@ -364,5 +375,101 @@ def BB84_Experiment(n: int, distance: float,
     filtered_params = {key: local_vars[key] for key in PARAMETER_UNITS.keys() if key in local_vars}
     return dc, alice_key, bob_key, filtered_params
 
+def list_to_key(key_list):
+    key = Key()
+    key._size = len(key_list)
+    for i in range(len(key_list)):
+        key._bits[i] = key_list[i]
+    return key
 
+def key_to_list(key):
+    list_res = []
+    for i in range(key._size):
+        list_res.append(key._bits[i])
+    return list_res
 
+def transform(a):
+    for jj in range(len(a)):
+        if a[jj]:
+            a[jj]=1
+        elif not a[jj]:
+            a[jj]=0
+    return a
+
+def create_reconciliation2(input_message, error_message, er_estimated):
+    correct_key = list_to_key(input_message)
+    noisy_key = list_to_key(error_message)
+    #We create both keys
+    mock_classical_channel = MockClassicalChannel(correct_key)
+    rec = Reconciliation('original', mock_classical_channel, noisy_key, er_estimated)
+    reconciled_key = rec.reconcile()
+    exposed = rec.stats.ask_parity_blocks
+    efficiency = rec.stats.unrealistic_efficiency
+    duration = rec.stats.elapsed_real_time #rec.stats.elapsed_process_time
+    #final_error = correct_key.difference(reconciled_key)/correct_key.get_size()
+    alice_final_key = copy.deepcopy(key_to_list(correct_key))
+    bob_final_key = copy.deepcopy(key_to_list(rec._reconciled_key))
+    return alice_final_key, bob_final_key, exposed, efficiency, duration
+
+def FULL_BB84(n: int, distance: float,
+                    depolar_rate: float, DCR: float, strategy: float,
+                    gate_duration_A: float, gate_duration_B: float, gate_noise_rate_A: float, gate_noise_rate_B: float,
+                    dead_time: float, detector_delay: float, 
+                    emission_efficiency: float, detection_efficiency: float,
+                    distance_factor = 1, classical_std = 0, covery_factor = 3,
+                    p_loss_length = 0.2, std = 0.02, speed_fraction = 0.67,
+                    eps = 0.05, C_F = 3, required_length = None
+                    ):
+    if strategy == 1:
+        n_lim, A, _ = get_n_lim(distance = distance, DCR = DCR, depolar_rate = depolar_rate, l = required_length, STRATEGY = strategy,
+              p_loss_length = p_loss_length, emission_efficiency = emission_efficiency, 
+              detection_efficiency = detection_efficiency, speed_fraction = speed_fraction,
+              std = std, covery_factor = covery_factor,
+              C_F = C_F, eps = eps)
+        strategy = [1.0, A] #The second value sets the number of bits used for parameter estimation
+
+    elif strategy == 0.5:
+        n_lim, A, _ = get_n_lim(distance = distance, DCR = DCR, depolar_rate = depolar_rate, l = required_length, STRATEGY = strategy,
+              p_loss_length = p_loss_length, emission_efficiency = emission_efficiency, 
+              detection_efficiency = detection_efficiency, speed_fraction = speed_fraction,
+              std = std, covery_factor = covery_factor,
+              C_F = C_F, eps = eps)
+        strategy = [0.5, A/np.sqrt(n_lim)]
+        
+    dc, key_a, key_b, params = BB84_Experiment(n = n, distance = distance, depolar_rate = depolar_rate, DCR = DCR,
+                    gate_duration_A = gate_duration_A, gate_duration_B = gate_duration_B, 
+                    gate_noise_rate_A = gate_noise_rate_A, gate_noise_rate_B = gate_noise_rate_B, 
+                    dead_time = dead_time, detector_delay = detector_delay,
+                    emission_efficiency = emission_efficiency, detection_efficiency = detection_efficiency, 
+                    distance_factor = distance_factor, classical_std = classical_std, covery_factor = covery_factor,
+                    p_loss_length = p_loss_length, std = std, speed_fraction = speed_fraction, strategy = strategy)
+    
+    P_flip = expected_QBER(distance, p_loss_length,
+      emission_efficiency, detection_efficiency,
+      DCR, speed_fraction, depolar_rate,
+      std, covery_factor)
+    protocol_duration = params["sim_duration"]
+    quantum_phase_duration = params["sim_duration"]
+    wait_time = distance/(speed_fraction*300000)*1e9
+
+    #Information reconciliation
+    input_message_C, error_message_C, exposed_bits, cascade_efficiency, duration_C = create_reconciliation2(key_a, key_b, P_flip)
+    protocol_duration += duration_C*1e9
+   
+    #Privacy amplification
+    max_eps = 0.01 #The maximum acceptable extractor error.
+    new_message_length = len(input_message_C)
+    k = int(new_message_length*(1 - 2.27*H(P_flip))) #The total min-entropy of the input bits.
+    ext = Trevisan(new_message_length, k, max_eps);
+
+    seed_bits = [int(np.random.rand() > 0.5) for _ in range(ext.ext.get_seed_length())]
+    input_message_CP = transform(ext.extract(list(input_message_C), seed_bits));
+    m = len(input_message_CP)
+
+    #Returns: 
+    #   1) output key length, 
+    #   2) key length before post-processing, 
+    #   3) protocol duration (ns), 
+    #   4) quantum phase duration (ns)
+    #   5) cascade efficiency
+    return input_message_CP, m, new_message_length, protocol_duration, quantum_phase_duration, cascade_efficiency
