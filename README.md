@@ -64,6 +64,25 @@ This module defines the **network-level architecture and delay model** for the Q
 
 This module is central to initializing the simulated environment used by the BB84 and fake QKD protocols.
 
+---
 
+### 📁 `nodes/`
+
+This folder contains classes that represent **different types of QKD nodes** (distinguishing between sender and receiver) and supporting logic for communication and protocol coordination. These nodes form the building blocks of the network simulation and are instantiated by the `network.py` module.
+
+#### 📄 `qkd_node.py`
+Defines a generic **QKD-capable node** that can send quantum states. Acts as a base class for specialized receiver implementations.
+
+- `create_qprocessor` Function: This function creates a quantum processor for QKD tasks. It has a single memory unit and noise models for the quantum gates and quantum memory.
+- `QKDNode` class: Represents a node in a quantum key distribution network, extending the NetSquid Node class.
+
+#### 📄 `receiver_node.py`
+ReceiverNode class inherits from QKDNode and represents a node in a Quantum Key Distribution (QKD) network specifically designed for receiving qubits. This class adds functionalities for incorporating a quantum detector and a property for the Dark Count Rate (DCR).
+
+- `ReceiverNode` class: Inherits from `QKDNode` and configures the node to receive quantum and classical messages, and suffer from dark count rates.
+
+#### 📄 `qkd_link_informer.py`
+
+- `QKDLinkInformer` class: When a QKD connection is stablished, each one of the participating nodes gathers and stores knowledge about the link status, and also information about the other node. This can be modelized using this new class, to which both nodes will have access. Each node in the quantum network owns a dictionary of Link Informers, each one coresponding to a node which it is connected to. A Link Informer saves relevant information about the connection: includes the key memory for previusly shared keys between both parties, along with important parameters about the link, such as distance, std, attenuation rate, characteristic speed and depolar rate.
 
 
