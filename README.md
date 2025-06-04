@@ -28,3 +28,24 @@ pip install -r requirements.txt
 ```
 
 ## 📁 Project Structure and Module Descriptions
+
+### 📄 `fake_qkd.py`
+
+This module implements a **mock BB84 protocol** used for testing and simulation purposes. It mimics the behavior of a quantum key distribution session without invoking actual BB84 operations implemented in NetSquid. Useful for validating network flow, timing, or component integration in the absence of quantum backends.
+
+**Main features:**
+- `FakeQKDProtocol` class: Simulates a fake QKD session between two nodes.
+- Functions to imitate key generation and communication delays: `generate_binary_list`, `calculate_error_rate`, `parameter_estimation`, `apply_loss_and_noise`
+
+---
+
+### 📄 `math_tools.py`
+
+A collection of **mathematical utility functions** used throughout the simulation, particularly for calculating entropy and error probabilities.
+
+**Key functions:**
+- `H2(p)`: Binary Shannon entropy.
+- `P_Loss()`, `P_Depolar()`, `P_DCR()`: Models for loss, depolarization, and dark count rates.
+- `expected_qber()`: Estimates QBER under noisy conditions.
+
+These tools support both performance analysis and protocol decision-making logic.
