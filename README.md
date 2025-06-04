@@ -25,3 +25,6 @@ To install the Python packages (except NetSquid), run:
 
 ```bash
 pip install -r requirements.txt
+```
+
+## 📁 Project Structure and Module Descriptions
