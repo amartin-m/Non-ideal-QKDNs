@@ -41,11 +41,14 @@ This module implements a **mock BB84 protocol** used for testing and simulation 
 
 ### 📄 `math_tools.py`
 
-A collection of **mathematical utility functions** used throughout the simulation, particularly for calculating entropy and error probabilities.
+A collection of **mathematical utility functions** used throughout the simulation. This include calculating relevant probabilities to model noise and loses, estimating fundamental parameters to test the behavior of the QKD protocol (KBR, QBER, limit distance) or calculating the minimum photons needed to meet output key length requirements posed by the user. This is the implementation of our theoretical analysis.
 
 **Key functions:**
 - `H(p)`: Binary Shannon entropy.
 - `P_Loss()`, `P_Depolar()`, `P_DCR()`: Models for loss, depolarization, and dark count rates.
-- `expected_qber()`: Estimates QBER under noisy conditions.
+- `expected_qber()`: Estimates QBER under noisy conditions. Specifically, this function calculates the probability of a bit flip occurring between Alice's and Bob's raw keys.
+- `expected_KBR`: This function estimates the KBR, given as number of output bits per quantum channel usage, for a given set of parameters. It also estimates the standard deviation of this quantity according to our theoretical analysis.
+- `m_solution`: Finds the value for m, the output key length after applying the Trevisan extractor, solving the implicit equation for this variable. For that purpose, `scipy.fsolve` is used.
+- `limit_distance`: Calculates the maximum distance for which a non-zero secret key can be obtained after executing the protocol. This is obtained for a given set of parameters.
+- `get_minimum_photons`: Estimate the minimum number of photons required to generate a secure key of length M over a quantum link with given physical parameters. This function allows to set the preferred paramater estimation strategy.
 
-These tools support both performance analysis and protocol decision-making logic.
