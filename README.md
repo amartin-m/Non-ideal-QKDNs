@@ -29,6 +29,8 @@ pip install -r requirements.txt
 
 ## 📁 Project Structure and Module Descriptions
 
+![Project Structure](images/diagram.png)
+
 ### 📄 `fake_qkd.py`
 
 This module implements a **mock BB84 protocol** used for testing and simulation purposes. It mimics the behavior of a quantum key distribution session without invoking actual BB84 operations implemented in NetSquid. Useful for validating network flow, timing, or component integration in the absence of quantum backends.
