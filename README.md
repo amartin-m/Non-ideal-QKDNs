@@ -14,10 +14,10 @@ Standard libraries (no need to install):
 - `random`, `copy`, `typing`
 
 Third-party libraries:
-- `numpy` – numerical computing
-- `scipy` – scientific computing and optimization
-- `pydynaa` – event-driven simulation
-- `NetSquid` – quantum network simulator ([installation instructions](https://www.netsquid.org/))
+- `numpy` – numerical computing (1.24.4)
+- `scipy` – scientific computing and optimization (scipy.optimize) (1.9.3)
+- `pydynaa` – event-driven simulation (1.0.2)
+- `NetSquid` – quantum network simulator ([installation instructions](https://www.netsquid.org/)) (1.1.7)
 - [`cryptomyte.trevisan`](https://github.com/CQCL/cryptomite) – randomness extractor (Trevisan)
 - [`cascade-python`](https://github.com/brunorijsman/cascade-python) – error correction protocol
 
