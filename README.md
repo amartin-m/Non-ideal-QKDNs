@@ -52,3 +52,18 @@ A collection of **mathematical utility functions** used throughout the simulatio
 - `limit_distance`: Calculates the maximum distance for which a non-zero secret key can be obtained after executing the protocol. This is obtained for a given set of parameters.
 - `get_minimum_photons`: Estimate the minimum number of photons required to generate a secure key of length M over a quantum link with given physical parameters. This function allows to set the preferred paramater estimation strategy.
 
+---
+
+### 📄 `network.py`
+
+This module defines the **network-level architecture and delay model** for the QKD simulation environment. It sets up the topology, timing behavior, and node interconnections required to simulate realistic quantum communication scenarios.
+
+**Main components:**
+- `QKDNetwork` class: Manages the creation and connection of QKD nodes across a simulated network in NetSquid.
+- `GaussianDelayModel` class: Introduces realistic communication delays for the quantum channel based on a Gaussian distribution, mimicking latency in optical fiber links.
+
+This module is central to initializing the simulated environment used by the BB84 and fake QKD protocols.
+
+
+
+
