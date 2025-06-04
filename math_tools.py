@@ -48,16 +48,6 @@ Parameters:
 import numpy as np
 from scipy.optimize import fsolve
 
-def H2(x):
-        #Shannon binary entropy for security rate of BB84
-        if x>0 and x<1:
-            res = 1-2*(x*np.log2(1/x)+(1-x)*np.log2(1/(1-x)))
-            return (res + np.abs(res))/2
-        elif x==0:
-            return 1
-        else:
-            return 0
-
 def H(x):
     #Shannon binary entropy for security rate of BB84
     if x>0 and x<1:
