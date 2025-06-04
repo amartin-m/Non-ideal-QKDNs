@@ -1,6 +1,3 @@
-import sys
-sys.path.append('/Users/andres/Documents/VisualStudio/BB84_Project')
-
 from nodes.qkd_node import QKDNode
 from nodes.qkd_link_informer import QKDLinkInformer
 from nodes.receiver_node import ReceiverNode
