@@ -85,4 +85,34 @@ ReceiverNode class inherits from QKDNode and represents a node in a Quantum Key 
 
 - `QKDLinkInformer` class: When a QKD connection is stablished, each one of the participating nodes gathers and stores knowledge about the link status, and also information about the other node. This can be modelized using this new class, to which both nodes will have access. Each node in the quantum network owns a dictionary of Link Informers, each one coresponding to a node which it is connected to. A Link Informer saves relevant information about the connection: includes the key memory for previusly shared keys between both parties, along with important parameters about the link, such as distance, std, attenuation rate, characteristic speed and depolar rate.
 
+---
+
+### 📁 `bb84/`
+
+This folder contains the full implementation of the **BB84 quantum key distribution protocol**, split into modular components to separately handle protocol stages for the sender (Alice), receiver (Bob), and core logic. These modules work together to simulate a full BB84 session over a quantum network, driven by node behavior and network conditions.
+
+#### 📄 `basic_protocol.py`
+Defines common base functionality shared between the sender and receiver protocols.
+
+- `BasicProtocol` class:  A base class for defining protocols with additional functionalities on top of NodeProtocol (NetSquid). These functionalities are shared between the sender and the receiver in a DV-QKD protocol.
+
+  
+#### 📄 `sender_protocol.py`
+Implements the sender side (Alice) of the BB84 protocol.
+
+- `SenderProtocol` class: Handles the generation of quantum bits, basis selection, and the transmission of quantum and classical messages to the receiver.
+
+#### 📄 `receiver_protocol.py`
+Implements the receiver side (Bob) of the BB84 protocol.
+
+- `ReceiverProtocol` class: Handles quantum bit reception, basis measurement, sifting, and preparation for key reconciliation.
+
+#### 📄 `bb84_protocol.py`
+Combines the sender and receiver protocol logic into a unified BB84 setup.
+
+**Main components:**
+- `BB84Protocol` class: Manages full protocol orchestration between sender and receiver nodes. Instantiates `SenderProtocol` and `ReceiverProtocol`, handles timing, and initiates the key exchange process. Inherits LocalProtocol from NetSquid.
+- `setup_datacontroller` function: Sets up a data collector for the BB84 protocol to gather key statistics, such as QBER and key rate. This function ensures that Alice and Bob nodes are correctly identified in the network, calculates the Quantum Bit Error Rate (QBER) and the expected key generation rate (KBR_exp), and collects relevant metrics during the protocol execution.
+- `BB84_Experiment` function:     Executes only the quantum phase of hte BB84 quantum key distribution (QKD) experiment simulation using NetSquid. It is used to benchmark this part of the protocol, where NetSquid is involved.
+- `FULL_BB84` function: Runs a full BB84 QKD experiment simulation using NetSquid, cascade-python and Cryptomite.trevisan. This function sets up a QKD network with two nodes (Alice and Bob), applies a specified strategy for parameter estimation, simulates quantum transmission, and performs post-processing (error correction and privacy amplification) to generate a final secret key.
 
