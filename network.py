@@ -1,3 +1,6 @@
+import sys
+sys.path.append('/Users/andres/Documents/VisualStudio/BB84_Project')
+
 from nodes.qkd_node import QKDNode
 from nodes.qkd_link_informer import QKDLinkInformer
 from nodes.receiver_node import ReceiverNode
@@ -111,22 +114,23 @@ class QKDNetwork(Network):
         Typical Values (Example):
         ---------------
         1. Channel properties:
-            - std = 0.05
-            - classical_std = 0.1
-            - distance_factor = 2
-            - speed_fraction = 0.5
-            - depolar_rate = 5e7 Hz
-            - p_loss_init = 0.2
+            - std = 0.02
+            - classical_std = 0
+            - distance_factor = 1
+            - speed_fraction = 0.67
+            - depolar_rate = 100 Hz
+            - emission_efficiency = 0.2
+            - detection_efficiency = 0.6
             - p_loss_length = 0.2 dB/km
         2. Other parameters:
             - covery_factor = 3
         3. Detector parameters:
-            - DCR = 100 counts/s
-            - detector_delay = 1 ns
-            - dead_time = 10 ns
+            - DCR = 25 counts/s
+            - detector_delay = 0.5 ns
+            - dead_time = 100 ns
         4. Quantum processor parameters:
             - gate_duration = 1 ns
-            - gate_noise_rate = 200 Hz
+            - gate_noise_rate = 0 Hz
 
         Notes:
         ------
@@ -155,7 +159,7 @@ class QKDNetwork(Network):
                     depolar_rate = depolar_rate)
         self.inform_about_connection(nodeA, nodeB, link_info)
 
-        #BIDIRECTIONAL QUANTUM CONNECTION (Even though we are only using 1D)
+        #BIDIRECTIONAL QUANTUM CONNECTION (Even though we are only using one direction)
         qchannel_1 = QuantumChannel(name="qchannel[A to B]",
                                     length=distance,
                                     models={"delay_model": delay_model, "quantum_noise_model": noise_model, 'quantum_loss_model': loss_model})
