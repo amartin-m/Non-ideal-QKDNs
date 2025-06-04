@@ -36,10 +36,20 @@ class QKDLinkInformer():
                 f"speed_fraction={self.speed_fraction:.2f}, depolar_rate={self.depolar_rate:.2f})")
 
     def add_key(self, key: list):
-        self.key_memory.append(key)
+        self.key_memory += key
 
-    def get_key(self, position: int):
-        return self.key_memory[position]
+    def get_key_material(self, required_length):
+        """
+        Returns and removes the first `required_length` bits from self.key_memory.
+        Raises a ValueError if not enough bits are available.
+        """
+        if len(self.key_memory) >= required_length:
+            result = self.key_memory[:required_length]
+            self.key_memory = self.key_memory[required_length:]  # Remove used bits
+            return result
+        else:
+            raise ValueError(f"Not enough key material. Required: {required_length}, available: {len(self.key_memory)}")
+    
     def get_last_key(self):
         if self.key_memory != []:
             return self.key_memory[len(self.key_memory) - 1]
