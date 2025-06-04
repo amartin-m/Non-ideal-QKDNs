@@ -29,7 +29,7 @@ pip install -r requirements.txt
 
 ## 📁 Project Structure and Module Descriptions
 
-![Project Structure](images/diagram.png)
+![Project Structure](images/diagram.jpg)
 
 ### 📄 `fake_qkd.py`
 
