@@ -189,8 +189,12 @@ def setup_datacollector(protocol):
             return res/len(a)
             
     def calc_QBER(evexpr):
-        key_a = alice.connections[bob.name].get_last_key()
-        key_b = bob.connections[alice.name].get_last_key()
+        #key_a = alice.connections[bob.name].get_last_key()
+        #key_b = bob.connections[alice.name].get_last_key()
+
+        key_a = protocol.subprotocols["subprotocol_A"].raw_key
+        key_b = protocol.subprotocols["subprotocol_B"].raw_key
+
         qber = error_rate(key_a, key_b)
         n = protocol.subprotocols['subprotocol_A'].n
         int_key_size_1 = protocol.subprotocols['subprotocol_A'].intermediate_key_length_1
@@ -204,7 +208,7 @@ def setup_datacollector(protocol):
         #s = max(2*alice.properties["gate_duration"], 3*protocol.subprotocols['subprotocol_B'].covery_factor*alice.connections[bob.name].std*wait_time + bob.properties["dead_time"] + bob.properties["detector_delay"] + bob.properties["gate_duration"])
         #KBR_t = self.H2(err)*(1 - P0)* (10**(-R/10*wait_time*1e-9*0.5*300000))/(3*s)*1e9
         key_size = len(key_b)
-        return {"Photons sent": n, "Final_key_size": key_size, "Intermediate_key_size_1": int_key_size_1, "Intermediate_key_size_2": int_key_size_2, "Estimated QBER": estimated_qber, "Actual QBER": qber, "KBR_exp (Hz)": kr_exp, "KBR_exp": kr_exp2} #we use here the correct ns.sim_time()
+        return {"Alice raw key": key_a, "Bob raw key": key_b, "Photons sent": n, "Final_key_size": key_size, "Intermediate_key_size_1": int_key_size_1, "Intermediate_key_size_2": int_key_size_2, "Estimated QBER": estimated_qber, "Actual QBER": qber, "KBR_exp (Hz)": kr_exp, "KBR_exp": kr_exp2} #we use here the correct ns.sim_time()
 
     dc = DataCollector(calc_QBER, include_entity_name=False)
     dc.collect_on([pydynaa.EventExpression(source=protocol.subprotocols["subprotocol_B"], event_type=Signals.SUCCESS.value), pydynaa.EventExpression(source=protocol.subprotocols["subprotocol_A"], event_type=Signals.SUCCESS.value)], combine_rule = "AND") #.subprotocols["subprotocol_A"]
@@ -244,16 +248,15 @@ def print_parameters(parameters: dict):
 
 
 def BB84_Experiment(n: int, distance: float,
-                    depolar_rate: float,
+                    depolar_rate: float, DCR: float, strategy: float,
                     gate_duration_A: float, gate_duration_B: float, gate_noise_rate_A: float, gate_noise_rate_B: float,
-                    dead_time: float, detector_delay: float, DCR: float,
+                    dead_time: float, detector_delay: float, 
                     emission_efficiency: float, detection_efficiency: float,
-                    strategy = 1/3,
                     distance_factor = 1, classical_std = 0, covery_factor = 3,
                     p_loss_length = 0.2, std = 0.02, speed_fraction = 0.67
                     ):
     """
-    Executes a complete BB84 quantum key distribution (QKD) experiment simulation using NetSquid.
+    Executes only the quantum phase of hte BB84 quantum key distribution (QKD) experiment simulation using NetSquid.
 
     This function simulates the key distribution process between two nodes, Alice and Bob, over a 
     quantum link with specified parameters. It calculates the performance metrics of the protocol 
@@ -367,8 +370,8 @@ def BB84_Experiment(n: int, distance: float,
 
     res = ns.sim_run(duration = sim_duration)
     #print(dc.dataframe)
-    alice_key = nodeA.connections[nodeB.name].get_last_key()
-    bob_key = nodeB.connections[nodeA.name].get_last_key()
+    alice_key = dc.dataframe.pop("Alice raw key").iloc[-1]
+    bob_key = dc.dataframe.pop("Bob raw key").iloc[-1]
     local_vars = locals()
 
     # Filter and return only the variables that are in 'parameters' and exist in locals()
@@ -412,16 +415,58 @@ def create_reconciliation2(input_message, error_message, er_estimated):
     return alice_final_key, bob_final_key, exposed, efficiency, duration
 
 def FULL_BB84(n: int, distance: float,
-                    depolar_rate: float, DCR: float, strategy: float,
+                    depolar_rate: float,
                     gate_duration_A: float, gate_duration_B: float, gate_noise_rate_A: float, gate_noise_rate_B: float,
-                    dead_time: float, detector_delay: float, 
+                    dead_time: float, detector_delay: float, DCR: float,
                     emission_efficiency: float, detection_efficiency: float,
+                    strategy = 1/3,
                     distance_factor = 1, classical_std = 0, covery_factor = 3,
-                    p_loss_length = 0.2, std = 0.02, speed_fraction = 0.67,
-                    eps = 0.05, C_F = 3, required_length = None
+                    p_loss_length = 0.2, std = 0.02, speed_fraction = 0.67, C_F = 3, eps = 0.1,
+                    required_length = None
                     ):
+    """
+    Runs a full BB84 QKD experiment simulation using NetSquid. 
+    This function includes INFORMATION RECONCILIATION AND PRIVACY AMPLIFICATION.
+
+    This function sets up a QKD network with two nodes (Alice and Bob), applies a specified
+    strategy for parameter estimation, simulates quantum transmission, and performs 
+    post-processing (error correction and privacy amplification) to generate a final secret key.
+
+    Parameters:
+        - n (int): Number of initial photons.
+        - distance (float): Distance between Alice and Bob in kilometers.
+        - depolar_rate (float): Depolarization rate of the quantum channel.
+        - gate_duration_A (float): Gate time (ns) for Alice's emission.
+        - gate_duration_B (float): Gate time (ns) for Bob's detection.
+        - gate_noise_rate_A (float): Noise rate during Alice's gate operation.
+        - gate_noise_rate_B (float): Noise rate during Bob's gate operation.
+        - dead_time (float): Dead time of Bob's detector (ns).
+        - detector_delay (float): Delay before detection (ns).
+        - DCR (float): Dark count rate of the detector.
+        - emission_efficiency (float): Efficiency of Alice's photon source.
+        - detection_efficiency (float): Efficiency of Bob's detector.
+        - strategy (float, optional): Parameter estimation strategy (default: 1/3, 1 or 0.5).
+        - distance_factor (float): Multiplier for quantum channel length (default: 1).
+        - classical_std (float): Standard deviation for classical channel delay (default: 0).
+        - covery_factor (float): Coverage factor for uncertainty estimates (default: 3).
+        - p_loss_length (float): Channel loss per kilometer (default: 0.2).
+        - std (float): Standard deviation for photon timing jitter (default: 0.02).
+        - speed_fraction (float): Fraction of the speed of light in fiber (default: 0.67).
+        - C_F (float, optional): Confidence factor for number of photons estimation. Default is 3.
+        - eps (float, optional): Maximum acceptable failure probability. Default is 0.1.
+
+
+    Returns:
+        tuple:
+            - output_message_CP (list[int]): Final secret key.
+            - m (int): Final key length after privacy amplification.
+            - new_message_length (int): Key length before privacy amplification.
+            - protocol_duration (float): Total duration of the protocol (ns).
+            - quantum_phase_duration (float): Duration of the quantum transmission phase (ns).
+            - cascade_efficiency (float): Efficiency of the Cascade error correction protocol.
+    """
     if strategy == 1:
-        n_lim, A, _ = get_n_lim(distance = distance, DCR = DCR, depolar_rate = depolar_rate, l = required_length, STRATEGY = strategy,
+        n_lim, A, _ = get_n_lim(distance = distance, DCR = DCR, depolar_rate = depolar_rate, M = required_length, STRATEGY = strategy,
               p_loss_length = p_loss_length, emission_efficiency = emission_efficiency, 
               detection_efficiency = detection_efficiency, speed_fraction = speed_fraction,
               std = std, covery_factor = covery_factor,
@@ -429,33 +474,56 @@ def FULL_BB84(n: int, distance: float,
         strategy = [1.0, A] #The second value sets the number of bits used for parameter estimation
 
     elif strategy == 0.5:
-        n_lim, A, _ = get_n_lim(distance = distance, DCR = DCR, depolar_rate = depolar_rate, l = required_length, STRATEGY = strategy,
+        n_lim, A, _ = get_n_lim(distance = distance, DCR = DCR, depolar_rate = depolar_rate, M = required_length, STRATEGY = strategy,
               p_loss_length = p_loss_length, emission_efficiency = emission_efficiency, 
               detection_efficiency = detection_efficiency, speed_fraction = speed_fraction,
               std = std, covery_factor = covery_factor,
               C_F = C_F, eps = eps)
         strategy = [0.5, A/np.sqrt(n_lim)]
         
-    dc, key_a, key_b, params = BB84_Experiment(n = n, distance = distance, depolar_rate = depolar_rate, DCR = DCR,
-                    gate_duration_A = gate_duration_A, gate_duration_B = gate_duration_B, 
-                    gate_noise_rate_A = gate_noise_rate_A, gate_noise_rate_B = gate_noise_rate_B, 
-                    dead_time = dead_time, detector_delay = detector_delay,
-                    emission_efficiency = emission_efficiency, detection_efficiency = detection_efficiency, 
-                    distance_factor = distance_factor, classical_std = classical_std, covery_factor = covery_factor,
-                    p_loss_length = p_loss_length, std = std, speed_fraction = speed_fraction, strategy = strategy)
+    ns.sim_reset()
+
+    nodeA = QKDNode("Alice", gate_duration = gate_duration_A, gate_noise_rate = gate_noise_rate_A, 
+                    emission_efficiency = emission_efficiency, port_names=["q_channel", "c_channel"])
+    nodeB = ReceiverNode("Bob", detector_delay = detector_delay, 
+                        dead_time = dead_time, gate_duration = gate_duration_B, 
+                        gate_noise_rate = gate_noise_rate_B, DCR = DCR, 
+                        detection_efficiency = detection_efficiency, port_names=["q_channel", "c_channel"])
+    BB84_network = QKDNetwork("BB84_network")
+    BB84_network.set_simple_link(nodeA, nodeB, distance, depolar_rate,
+             distance_factor, classical_std,
+             p_loss_length, std, speed_fraction)
     
+    #Parameter estimation strategy is given as a parameter, since it depends on the requested length.
+    protocol = BB84_Protocol(n, BB84_network, nodeA.name, nodeB.name, covery_factor, strategy)
+    dc = setup_datacollector(protocol)
+    wait_time = distance/(speed_fraction * 300000) * 1e9
+    sending_rate = max(3*gate_duration_A, 3*covery_factor*std*wait_time + dead_time + detector_delay + gate_duration_B)
+    protocol.start()
+    sim_duration = gate_duration_A + 20*wait_time + (n+1)*sending_rate
+            #print(f"Round {j}. The simulation will last: {sim_duration} ns.\n")
+
+    res = ns.sim_run(duration = sim_duration)
+    #print(dc.dataframe)
+    
+    alice_raw_key = dc.dataframe.pop("Alice raw key").iloc[-1]
+    bob_raw_key = dc.dataframe.pop("Bob raw key").iloc[-1]
+
+    local_vars = locals()
+    filtered_params = {key: local_vars[key] for key in PARAMETER_UNITS.keys() if key in local_vars}
+
     P_flip = expected_QBER(distance, p_loss_length,
       emission_efficiency, detection_efficiency,
       DCR, speed_fraction, depolar_rate,
       std, covery_factor)
-    protocol_duration = params["sim_duration"]
-    quantum_phase_duration = params["sim_duration"]
+    protocol_duration = filtered_params["sim_duration"]
+    quantum_phase_duration = filtered_params["sim_duration"]
     wait_time = distance/(speed_fraction*300000)*1e9
 
     #Information reconciliation
-    input_message_C, error_message_C, exposed_bits, cascade_efficiency, duration_C = create_reconciliation2(key_a, key_b, P_flip)
+    input_message_C, error_message_C, exposed_bits, cascade_efficiency, duration_C = create_reconciliation2(alice_raw_key, bob_raw_key, P_flip)
     protocol_duration += duration_C*1e9
-   
+
     #Privacy amplification
     max_eps = 0.01 #The maximum acceptable extractor error.
     new_message_length = len(input_message_C)
@@ -463,13 +531,28 @@ def FULL_BB84(n: int, distance: float,
     ext = Trevisan(new_message_length, k, max_eps);
 
     seed_bits = [int(np.random.rand() > 0.5) for _ in range(ext.ext.get_seed_length())]
-    input_message_CP = transform(ext.extract(list(input_message_C), seed_bits));
-    m = len(input_message_CP)
+    output_message_CP = transform(ext.extract(list(input_message_C), seed_bits));
+    m = len(output_message_CP)
+
+    nodeA.connections["Bob"].add_key(output_message_CP)
+    nodeB.connections["Alice"].add_key(output_message_CP)
 
     #Returns: 
+    #   0) final key
     #   1) output key length, 
     #   2) key length before post-processing, 
     #   3) protocol duration (ns), 
     #   4) quantum phase duration (ns)
     #   5) cascade efficiency
-    return input_message_CP, m, new_message_length, protocol_duration, quantum_phase_duration, cascade_efficiency
+    #   6) Data from the NetSquid simulation
+    
+    # print("Alice key memory: ", nodeA.connections["Bob"].key_memory)
+    # print("Bob key memory: ", nodeB.connections["Alice"].key_memory)
+    
+    # nodeA.connections["Bob"].get_key_material(1200)
+    # nodeB.connections["Alice"].get_key_material(1200)
+
+    # print("Alice key memory: ", nodeA.connections["Bob"].key_memory)
+    # print("Bob key memory: ", nodeB.connections["Alice"].key_memory)
+
+    return output_message_CP, m, new_message_length, protocol_duration, quantum_phase_duration, cascade_efficiency, dc

@@ -1,3 +1,7 @@
+import sys
+sys.path.append('/Users/andres/Documents/VisualStudio/BB84_Project')
+#for el in sys.path:
+    #print(el)
 import numpy as np
 from nodes.qkd_node import QKDNode
 from netsquid.protocols import NodeProtocol

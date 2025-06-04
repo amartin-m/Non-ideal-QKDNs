@@ -1,3 +1,6 @@
+import sys
+sys.path.append('/Users/andres/Documents/VisualStudio/BB84_Project')
+
 import netsquid as ns
 import numpy as np
 from bb84.basic_protocol import BasicProtocol
@@ -20,6 +23,7 @@ class SenderProtocol(BasicProtocol):
         self.s = s #send rate
         self.intermediate_key_length_1 = None
         self.intermediate_key_length_2 = None
+        self.raw_key = None
         self.strategy = strategy #Parameter estimation strategy
         """
         strategy = 1/3 is the average situation
@@ -114,7 +118,10 @@ class SenderProtocol(BasicProtocol):
             #KBR_e = self.H2(err)*len(alice_key2)/(ns.sim_time())*1e9
             c_port.tx_output("Error rate is estimated")
             self.node.connections[receiver_name].key_memory
-            self.save_key(alice_key2, receiver_name)
+
+            #self.save_key(alice_key2, receiver_name)
+            self.raw_key = alice_key2
+
             self.estimated_qber = err
             #print("Alice final key: ", self.node.connections[receiver_name].get_key(0))
             self.send_signal(Signals.SUCCESS, err)

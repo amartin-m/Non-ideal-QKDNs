@@ -1,3 +1,5 @@
+import sys
+sys.path.append('/Users/andres/Documents/VisualStudio/BB84_Project')
 import netsquid as ns
 import numpy as np
 from netsquid.protocols import Signals
@@ -14,6 +16,7 @@ class ReceiverProtocol(BasicProtocol):
             #raise TypeError(f"Expected a ReceiverNode instance, but got {type(self.node).__name__}")
         self.n = n
         self.covery_factor = covery_factor
+        self.raw_key = None
         
     def run(self):
         detector = self.node.subcomponents["QDetector"]
@@ -121,7 +124,9 @@ class ReceiverProtocol(BasicProtocol):
             bob_sample = self.sample_bits(bob_key2, bit_selection)
             c_port.tx_output(bob_sample)
             yield self.await_port_input(c_port)
-            self.save_key(bob_key2, sender_name)
+
+            #self.save_key(bob_key2, sender_name)
+            self.raw_key = bob_key2
 
             #print("Bob final key:   ", self.node.connections[sender_name].key_memory[0])
             self.send_signal(Signals.SUCCESS)
