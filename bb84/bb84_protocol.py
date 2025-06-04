@@ -1,6 +1,3 @@
-import sys
-sys.path.append('/Users/andres/Documents/VisualStudio/BB84_Project')
-
 #TREVISAN
 from cryptomite.trevisan import Trevisan
 
