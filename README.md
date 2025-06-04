@@ -19,7 +19,7 @@ Third-party libraries:
 - `pydynaa` – event-driven simulation
 - `NetSquid` – quantum network simulator ([installation instructions](https://www.netsquid.org/))
 - [`cryptomyte.trevisan`](https://github.com/CQCL/cryptomite) – randomness extractor (Trevisan)
-- [`cascade-python`](https://github.com/arnaucube/cascade_python_master](https://github.com/brunorijsman/cascade-python) – error correction protocol
+- [`cascade-python`](https://github.com/brunorijsman/cascade-python) – error correction protocol
 
 To install the Python packages (except NetSquid), run:
 
