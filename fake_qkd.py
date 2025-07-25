@@ -1,6 +1,10 @@
 import random
+import sys
 import numpy as np
 from scipy.optimize import fsolve
+
+
+sys.path.append('/Users/andres/Documents/VisualStudio/BB84_Project')
 from math_tools import *
 
 def generate_binary_list(N):
@@ -82,6 +86,8 @@ def apply_loss_and_noise(N, P_loss, P_noise, mf, strategy,
     if strategy == 1 or strategy == 0.5:
         g = eps * (1 + alpha*10**(-beta*P_noise))
         A = int(1/g**2*(1/P_noise - 1)) #A
+        #A = 1/(0.005**2) * P_noise * (1 - P_noise)
+        
         M_estimate = A
         if strategy == 0.5:
             lf = (mf + 6 + 4*np.log2(mf/0.01))/(1 - 2.27*H(P_noise))
@@ -96,7 +102,7 @@ def apply_loss_and_noise(N, P_loss, P_noise, mf, strategy,
         
     else:
         M_estimate = intermediate_length*strategy
-    
+
     final_key_A, final_key_B, estimated_error = parameter_estimation(modified_key_A, modified_key_B, int(M_estimate))
     return final_key_A, final_key_B, estimated_error, intermediate_length, M_estimate
 
