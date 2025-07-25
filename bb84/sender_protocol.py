@@ -1,3 +1,6 @@
+import sys
+sys.path.append('/Users/andres/Documents/VisualStudio/BB84_Project')
+
 import netsquid as ns
 import numpy as np
 from bb84.basic_protocol import BasicProtocol
@@ -88,7 +91,7 @@ class SenderProtocol(BasicProtocol):
             bob_bases = list(bob_bases)
     
             #8. Remove garbage from bases
-            alice_key2 = self.remove_garbage(alice_bases, bob_bases, alice_key)
+            alice_key2 = self.sift(alice_bases, bob_bases, alice_key)
             c_port.tx_output("Alice key ready")
             yield self.await_port_input(c_port)
             #print("Key length: ", len(alice_key2))
@@ -102,12 +105,11 @@ class SenderProtocol(BasicProtocol):
                 error_estimation_size = int(self.strategy[1]*np.sqrt(len(alice_key2))) #In this situations, extra constraits exist
             elif isinstance(self.strategy, list) and self.strategy[0] == 1.0:
                 error_estimation_size = int(self.strategy[1]) #In this situation, we choose a fixed number of bits. Extra constraits exist
-            #print("Bits used for parameter estimation: ", error_estimation_size)
+
             bit_selection = randint(n, size=error_estimation_size)
-            #print(error_estimation_size)
-            #print(bit_selection)
             c_port.tx_output(bit_selection)
             alice_sample = self.sample_bits(alice_key2, bit_selection)
+
             yield self.await_port_input(c_port)
             bob_sample = c_port.rx_input().items
             err = self.error_rate(alice_sample, bob_sample)

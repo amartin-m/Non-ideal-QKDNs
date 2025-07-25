@@ -1,3 +1,7 @@
+import sys
+sys.path.append('/Users/andres/Documents/VisualStudio/BB84_Project')
+#for el in sys.path:
+    #print(el)
 import numpy as np
 from nodes.qkd_node import QKDNode
 from netsquid.protocols import NodeProtocol
@@ -11,7 +15,7 @@ class BasicProtocol(NodeProtocol):
     Methods:
         save_key: stores the new key in the Node's dedicated memory
         H2: computes the Shannon binary entropy.
-        remove_garbage: performs the key sifting phase.
+        sift: performs the key sifting phase.
         sample_bits: gets a sample of the key, popping those elements from the original list.
         error_rate: Computes the error rate (shared functionality).
         pop_elements: Extracts elements from `arr1` based on a Boolean mask in `arr2`.
@@ -74,7 +78,7 @@ class BasicProtocol(NodeProtocol):
         else:
             return 1
 
-    def remove_garbage(self, a_bases: list, b_bases: list, bits: list):
+    def sift(self, a_bases: list, b_bases: list, bits: list):
         """
         Performs the sifting phase of a QKD protocol by removing bits where bases differ.
 

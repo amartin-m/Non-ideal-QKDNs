@@ -1,3 +1,5 @@
+import sys
+sys.path.append('/Users/andres/Documents/VisualStudio/BB84_Project')
 import netsquid as ns
 import numpy as np
 from netsquid.protocols import Signals
@@ -7,12 +9,13 @@ from numpy.random import randint
 import netsquid.components.instructions as instr
 
 class ReceiverProtocol(BasicProtocol):
-    def __init__(self, n, covery_factor, *args, **kwargs):
+    def __init__(self, n, P_extra, covery_factor, *args, **kwargs):
         # Call the constructor of the base class
         super().__init__(*args, **kwargs)
         #if not isinstance(self.node, ReceiverNode):
             #raise TypeError(f"Expected a ReceiverNode instance, but got {type(self.node).__name__}")
         self.n = n
+        self.p_extra = P_extra
         self.covery_factor = covery_factor
         self.raw_key = None
         
@@ -115,7 +118,14 @@ class ReceiverProtocol(BasicProtocol):
     
             #5. Remove garbage from bases
             yield self.await_port_input(c_port)
-            bob_key2 = self.remove_garbage(alice_bases, bob_bases, bob_key)
+            bob_key2 = self.sift(alice_bases, bob_bases, bob_key)
+
+            #6. Add extra noise
+            flip_mask = np.random.rand(len(bob_key)) < self.p_extra
+            # Apply flip: XOR each bit with the mask
+            bob_key2 = [bit ^ flip for bit, flip in zip(bob_key2, flip_mask)]
+
+            #7. Parameter estimation
             c_port.tx_output("Bob key ready")
             yield self.await_port_input(c_port)
             bit_selection = c_port.rx_input().items[0]
