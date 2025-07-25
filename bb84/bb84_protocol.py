@@ -657,13 +657,7 @@ def FULL_BB84(config: dict):
 
     #Returns: 
     #   0) final key
-    #   1) output key length, 
-    #   2) key length before post-processing, 
-    #   3) protocol duration (s), 
-    #   4) quantum phase duration (s)
-    #   5) cascade efficiency
-    #   6) Extra noise probability
-    #   7) Data from the NetSquid simulation
+    #   1) dc.dataframe containing other relevant performance parameters
     
     # print("Alice key memory: ", nodeA.connections["Bob"].key_memory)
     # print("Bob key memory: ", nodeB.connections["Alice"].key_memory)
