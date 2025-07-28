@@ -19,7 +19,7 @@ Third-party libraries:
 - `pydynaa` – event-driven simulation (1.0.2)
 - `NetSquid` – quantum network simulator ([installation instructions](https://www.netsquid.org/)) (1.1.7)
 - [`cryptomyte.trevisan`](https://github.com/CQCL/cryptomite) – randomness extractor (Trevisan)
-- [`cascade-python`](https://github.com/brunorijsman/cascade-python) – error correction protocol
+- [`cascade-python`](https://github.com/brunorijsman/cascade-python) – error correction protocol. This folder should be saved in the project directory, as specified below.
 
 To install the Python packages (except NetSquid), run:
 
@@ -30,6 +30,7 @@ pip install -r requirements.txt
 ## 📁 Project Structure and Module Descriptions
 
 ![Project Structure](images/diagram.jpg)
+![Save the "cascade-python" folder in the same directory as the rest of the project. ](images/cascade.jpg)
 
 ### 📄 `fake_qkd.py`
 
