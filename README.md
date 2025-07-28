@@ -30,7 +30,8 @@ pip install -r requirements.txt
 ## 📁 Project Structure and Module Descriptions
 
 ![Project Structure](images/diagram.jpg)
-![Save the "cascade-python" folder in the same directory as the rest of the project. ](images/cascade.jpg)
+
+![Save the "cascade-python" folder in the same directory as the rest of the project. ](images/cascade.jpeg)
 
 ### 📄 `fake_qkd.py`
 
