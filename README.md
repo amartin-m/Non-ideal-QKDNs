@@ -31,7 +31,9 @@ pip install -r requirements.txt
 
 ![Project Structure](images/diagram.jpg)
 
-![Save the "cascade-python" folder in the same directory as the rest of the project. ](images/cascade.jpeg)
+Save the "cascade-python" folder in the same directory as the rest of the project. 
+
+![Save cascade](images/cascade.jpeg)
 
 ### 📄 `fake_qkd.py`
 
