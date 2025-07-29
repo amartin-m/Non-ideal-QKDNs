@@ -1,10 +1,7 @@
 import random
-import sys
 import numpy as np
 from scipy.optimize import fsolve
 
-
-sys.path.append('/Users/andres/Documents/VisualStudio/BB84_Project')
 from math_tools import *
 
 def generate_binary_list(N):
