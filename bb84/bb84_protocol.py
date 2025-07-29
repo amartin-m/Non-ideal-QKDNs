@@ -1,12 +1,20 @@
 import sys
+import os
 import time
-sys.path.append('/Users/andres/Documents/VisualStudio/BB84_Project')
+import hashlib
+
+current_dir = os.path.dirname(os.path.abspath(__file__))
+nonideal_dir = os.path.abspath(os.path.join(current_dir, '..'))
+sys.path.append(nonideal_dir)
 
 #TREVISAN
 from cryptomite.trevisan import Trevisan
 
 #BRUNO RIKJSMAN CASCADE
-sys.path.append('/Users/andres/Desktop/MASTER/TFM/cascade_python_master')
+current_dir = os.path.dirname(os.path.abspath(__file__))
+parent_dir = os.path.abspath(os.path.join(current_dir, '..', 'cascade-python'))
+sys.path.append(parent_dir)
+
 from cascade.reconciliation import *
 from cascade.tests.test_reconciliation import *
 
@@ -53,7 +61,7 @@ PARAMETER_UNITS = {
 
 PARAMETER_VALUES_0 = {
     #CHANNEL
-    "distance": None, #link distance, km
+    "distance": 20, #link distance, km
     "depolar_rate": 100, #noise rate, Hz
     "emission_efficiency" : 0.2, #Emission success probability
     "detection_efficiency" : 0.6, #Detection success probability
@@ -79,7 +87,7 @@ PARAMETER_VALUES_0 = {
     "covery_factor" : 3,
     "strategy": 1/3, #Fraction of bits taken for parameter estimations. Requires a value between 0 and 1/2. If given a value 1, uses a fisex number of bits.
     "max_eps": 0.01, #Security parameter for Trevisan
-    "required_length": None, #Output length requirements fixed by the user, INTEGER
+    "required_length": 200, #Output length requirements fixed by the user, INTEGER
     "eps": 0.1, #Parameter to define QBER estimation accuracy
     "alpha": 3, #Parameter to define QBER estimation accuracy
     "beta": 20, #Parameter to define QBER estimation accuracy
@@ -442,14 +450,14 @@ def create_reconciliation2(input_message, error_message, er_estimated):
     rec = Reconciliation('original', mock_classical_channel, noisy_key, er_estimated)
     reconciled_key = rec.reconcile()
     exposed = rec.stats.ask_parity_blocks
-    efficiency = rec.stats.unrealistic_efficiency
+    efficiency = rec.stats.efficiency
     duration = rec.stats.elapsed_real_time #rec.stats.elapsed_process_time
     #final_error = correct_key.difference(reconciled_key)/correct_key.get_size()
     alice_final_key = copy.deepcopy(key_to_list(correct_key))
     bob_final_key = copy.deepcopy(key_to_list(rec._reconciled_key))
     return alice_final_key, bob_final_key, exposed, efficiency, duration
 
-def FULL_BB84(config: dict):
+def FULL_BB84(config = PARAMETER_VALUES_0):
     """
     required_length: int, distance: float,
                     depolar_rate: float,
@@ -522,20 +530,20 @@ def FULL_BB84(config: dict):
     depolar_rate = config.get("depolar_rate")
     emission_efficiency = config.get("emission_efficiency")
     detection_efficiency = config.get("detection_efficiency")
-    strategy = config.get("strategy", 1)
-    distance_factor = config.get("distance_factor", 1)
-    classical_std = config.get("classical_std", 0)
-    p_loss_length = config.get("p_loss_length", 0.2)
+    strategy = config.get("strategy")
+    distance_factor = config.get("distance_factor")
+    classical_std = config.get("classical_std")
+    p_loss_length = config.get("p_loss_length")
 
     # === Advanced or environment parameters (already in the config dict) ===
-    covery_factor = config.get("covery_factor", 3)
-    std = config.get("std", 0.02)
-    speed_fraction = config.get("speed_fraction", 2/3)
-    C_F = config.get("C_F", 3)
-    eps = config.get("eps", 0.1)
-    alpha = config.get("alpha", 3)
-    beta = config.get("beta", 20)
-    max_eps = config.get("max_eps", 0.01)
+    covery_factor = config.get("covery_factor")
+    std = config.get("std")
+    speed_fraction = config.get("speed_fraction")
+    C_F = config.get("C_F")
+    eps = config.get("eps")
+    alpha = config.get("alpha")
+    beta = config.get("beta")
+    max_eps = config.get("max_eps")
 
     d_lim = limit_distance(limit_error = 0.09122, p_loss_length = p_loss_length,
           emission_efficiency = emission_efficiency, detection_efficiency = detection_efficiency,
@@ -628,6 +636,14 @@ def FULL_BB84(config: dict):
     start_time_postprocessing = time.time()
     input_message_C, error_message_C, exposed_bits, cascade_efficiency, duration_C = create_reconciliation2(alice_raw_key, bob_raw_key, P_noise_effective)
 
+    #Key verification
+    # Compute SHA-256 hashes
+    alice_hash = hashlib.sha256(bytes(input_message_C)).hexdigest()
+    bob_hash = hashlib.sha256(bytes(error_message_C)).hexdigest()
+    # Check if hashes match
+    if alice_hash != bob_hash:
+        raise ValueError("Reconciled keys do not match between Alice and Bob.")
+
     #Privacy amplification
     max_eps = 0.01 #The maximum acceptable extractor error.
     new_message_length = len(input_message_C)
@@ -656,7 +672,8 @@ def FULL_BB84(config: dict):
     dc.dataframe["KBR"] = m/n
 
     #Returns: 
-    #   0) final key
+    #   0) final key. Only one key is given as output here, since we have checked that both keys are identical after parameter esimation. 
+    #      If that was not the case, an error must have been risen.
     #   1) dc.dataframe containing other relevant performance parameters
     
     # print("Alice key memory: ", nodeA.connections["Bob"].key_memory)

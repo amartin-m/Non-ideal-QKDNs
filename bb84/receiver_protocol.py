@@ -1,5 +1,3 @@
-import sys
-sys.path.append('/Users/andres/Documents/VisualStudio/BB84_Project')
 import netsquid as ns
 import numpy as np
 from netsquid.protocols import Signals
@@ -106,7 +104,7 @@ class ReceiverProtocol(BasicProtocol):
             yield self.await_port_input(c_port) #Wait until alice finishes sending qubits
             c_port.tx_output(bob_received)  # send message to Alice
             bob_bases = self.pop_elements(bob_bases, bob_received)
-            if bob_bases == []:
+            if len(bob_bases) == 0:
                 raise ValueError("Bob did not measure any quantum signal...")
             #3. Wait for Alice bases
             yield self.await_port_input(c_port)
